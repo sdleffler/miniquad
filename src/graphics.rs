@@ -1438,8 +1438,7 @@ impl Pipeline {
             })
             .sum();
 
-        let mut vertex_layout: Vec<Option<VertexAttributeInternal>> =
-            vec![None; attributes_len];
+        let mut vertex_layout: Vec<Option<VertexAttributeInternal>> = vec![None; attributes_len];
 
         for VertexAttribute {
             name,
@@ -1454,9 +1453,7 @@ impl Pipeline {
 
             let cname = CString::new(*name).unwrap_or_else(|e| panic!(e));
             let attr_loc = unsafe { glGetAttribLocation(program, cname.as_ptr() as *const _) };
-            if attr_loc == -1 {
-                panic!("failed to obtain location of attribute {}", name);
-            }
+            let attr_loc = if attr_loc == -1 { None } else { Some(attr_loc) };
             let divisor = if layout.step_func == VertexStep::PerVertex {
                 0
             } else {
@@ -1471,29 +1468,30 @@ impl Pipeline {
                 attributes_count = 4;
             }
             for i in 0..attributes_count {
-                let attr_loc = attr_loc as GLuint + i as GLuint;
+                if let Some(attr_loc) = attr_loc {
+                    let attr_loc = attr_loc as GLuint + i as GLuint;
 
-                let attr = VertexAttributeInternal {
-                    attr_loc,
-                    size: format.size(),
-                    type_: format.type_(),
-                    offset: buffer_data.offset,
-                    stride: buffer_data.stride,
-                    buffer_index: *buffer_index,
-                    divisor,
-                };
-                //println!("{}: {:?}", name, attr);
+                    let attr = VertexAttributeInternal {
+                        attr_loc,
+                        size: format.size(),
+                        type_: format.type_(),
+                        offset: buffer_data.offset,
+                        stride: buffer_data.stride,
+                        buffer_index: *buffer_index,
+                        divisor,
+                    };
+                    //println!("{}: {:?}", name, attr);
 
-                assert!(
-                    attr_loc < vertex_layout.len() as u32,
-                    format!(
-                        "attribute: {} outside of allocated attributes array len: {}",
-                        name,
-                        vertex_layout.len()
-                    )
-                );
-                vertex_layout[attr_loc as usize] = Some(attr);
-
+                    assert!(
+                        attr_loc < vertex_layout.len() as u32,
+                        format!(
+                            "attribute: {} outside of allocated attributes array len: {}",
+                            name,
+                            vertex_layout.len()
+                        )
+                    );
+                    vertex_layout[attr_loc as usize] = Some(attr);
+                }
                 buffer_data.offset += format.byte_len() as i64
             }
         }
